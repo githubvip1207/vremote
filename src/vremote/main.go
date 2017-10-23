@@ -10,8 +10,10 @@ package main
 import (
 	"io"
 	"fmt"
+	"os"
 	"log"
 	"strings"
+	"net"
 	"net/http"
 
 	"github.com/go-vgo/robotgo"
@@ -19,7 +21,13 @@ import (
 
 func main() {
 
-	fmt.Println("=-=-=-==-=-=-=-=-=-\nController-PC start...\nPC端占用端口号为:9090\n=-=-=-==-=-=-=-=-=-")
+	ips := getIps()
+	fmt.Println("=-=-=-==-=-=-=-=-=-=-=-=-==-=-=-=-")
+	fmt.Println("Controller-PC start...\n访问地址：")
+	for _, ip := range ips {
+		fmt.Println(fmt.Sprintf("\thttp://%s:9090", ip))
+	}
+	fmt.Println("=-=-=-==-=-=-=-=-=-=-=-=-==-=-=-=-")
 
 	http.HandleFunc("/", pageHandle)
 	http.HandleFunc("/api", ajaxHandle)
@@ -27,6 +35,24 @@ func main() {
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+func getIps() (r []string) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	for _, address := range addrs {
+		// 检查ip地址判断是否回环地址
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				r = append(r, ipnet.IP.String())
+			}
+		}
+	}
+	return
 }
 
 func ajaxHandle(w http.ResponseWriter, r *http.Request) {
